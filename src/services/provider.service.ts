@@ -9,6 +9,13 @@ export type WalletProvider = Awaited<ReturnType<typeof EthereumProvider.init>>;
 const projectId = import.meta.env.VITE_PROJECT_ID as string | undefined;
 const walletFeeApiUrl = import.meta.env.VITE_WALLET_FEE_API_URL as string | undefined;
 
+/**
+ * PNG, not SVG: wallets built with React Native can't render SVG icons. Served raw from the repo so it
+ * stays the same wherever the app is deployed. A github.com/.../blob/... URL returns an HTML page, not the image.
+ */
+const APP_ICON_URL =
+  "https://raw.githubusercontent.com/WalletConnect/app-fees-demo-public/main/public/icon-512.png";
+
 let providerPromise: Promise<WalletProvider> | undefined;
 
 /** Lazily creates the single WalletConnect EthereumProvider for the page. */
@@ -23,10 +30,7 @@ export function getProvider(): Promise<WalletProvider> {
       name: "Swap demo",
       description: "Wallet fee demo for in-wallet launches",
       url: new URL(import.meta.env.BASE_URL, window.location.origin).href,
-      // PNG first: wallets built with React Native can't render SVG icons
-      icons: ["icon-512.png", "icon.svg"].map(
-        (file) => new URL(`${import.meta.env.BASE_URL}${file}`, window.location.origin).href,
-      ),
+      icons: [APP_ICON_URL],
     },
     ...(walletFeeApiUrl ? { walletFeeApiUrl } : {}),
   });
