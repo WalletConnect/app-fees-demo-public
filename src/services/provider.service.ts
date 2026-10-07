@@ -23,7 +23,10 @@ export function getProvider(): Promise<WalletProvider> {
       name: "Swap demo",
       description: "Wallet fee demo for in-wallet launches",
       url: new URL(import.meta.env.BASE_URL, window.location.origin).href,
-      icons: [new URL(`${import.meta.env.BASE_URL}icon.svg`, window.location.origin).href],
+      // PNG first: wallets built with React Native can't render SVG icons
+      icons: ["icon-512.png", "icon.svg"].map(
+        (file) => new URL(`${import.meta.env.BASE_URL}${file}`, window.location.origin).href,
+      ),
     },
     ...(walletFeeApiUrl ? { walletFeeApiUrl } : {}),
   });
