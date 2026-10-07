@@ -1,0 +1,36 @@
+{
+  "name": "app-fees-demo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "deploy": "npm run build && npx vercel deploy dist --prod --yes"
+  },
+  "dependencies": {
+    "@walletconnect/ethereum-provider": "2.25.1-canary-6",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "happy-dom": "^20.14.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3",
+    "vitest": "^5.0.3"
+  },
+  "overrides": {
+    "@walletconnect/core": "2.25.1-canary-6",
+    "@walletconnect/ethereum-provider": "2.25.1-canary-6",
+    "@walletconnect/sign-client": "2.25.1-canary-6",
+    "@walletconnect/types": "2.25.1-canary-6",
+    "@walletconnect/universal-provider": "2.25.1-canary-6",
+    "@walletconnect/utils": "2.25.1-canary-6"
+  }
+}
