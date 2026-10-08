@@ -40,7 +40,6 @@ export default function App() {
       setConnectError(undefined);
       try {
         await connect(name);
-        setModalOpen(false);
       } catch (error) {
         setConnectError(getErrorMessage(error));
       }
@@ -48,16 +47,18 @@ export default function App() {
     [connect],
   );
 
+  // close as soon as the wallet connects. connect() resolves only after the wallet fee loads, and
+  // closing then would flash the wallet list in between
+  useEffect(() => {
+    if (status === "connected") setModalOpen(false);
+  }, [status]);
+
   // wallet launch: try once, when the modal opens. If the terms are already accepted (or the terms
   // step is off) connect right away, with no wallet-list click or QR. Otherwise ticking the box only
   // enables the wallet list and the user taps WalletConnect, which also goes through the wallet's bridge.
   useEffect(() => {
     if (!hostLaunchPending || status === "initializing") return;
     setHostLaunchPending(false);
-    if (status === "connected") {
-      setModalOpen(false);
-      return;
-    }
     if (status === "idle" && canConnect) void handleConnect("walletconnect");
   }, [hostLaunchPending, status, canConnect, handleConnect]);
 
