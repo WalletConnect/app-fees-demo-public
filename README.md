@@ -9,7 +9,7 @@ A small demo of WalletConnect's **wallet launch** flow and wallet fees. It's a s
 It supports both ways an app can charge a wallet's fee:
 
 - **Referral program** (the app's own partner program): the wallet sends a `referralCode`. The app resolves it through its backend (mocked here) to an integrator address and fee.
-- **Direct fee**: the wallet sends `feeBps` + `recipient`, and the app pays the wallet directly.
+- **Direct fee**: the wallet sends `feeBps` + a recipient per chain, and the app pays the wallet directly.
 
 It's a demo for partners, not a product: there are no real swaps, quotes or backend.
 
@@ -17,7 +17,7 @@ It's a demo for partners, not a product: there are no real swaps, quotes or back
 
 | Real | Mocked |
 | --- | --- |
-| WalletConnect connection (`@walletconnect/ethereum-provider@2.25.1-canary-6`), QR modal or wallet launch | The swap itself: the quote and the "You receive" amount use a fixed rate (`src/mocks/quote.ts`) |
+| WalletConnect connection (`@walletconnect/ethereum-provider@2.26.1-canary-1`), QR modal or wallet launch | The swap itself: the quote and the "You receive" amount use a fixed rate (`src/mocks/quote.ts`) |
 | `getWalletFee()` / `wallet_fee_changed` from the wallet fee API | The referral backend (`src/mocks/referral-api.ts`) |
 | Network switching (`wallet_switchEthereumChain`) | Terms of Use / Privacy Policy links |
 | One `eth_sendTransaction` that pays the fee on the current chain | MetaMask / Coinbase / Trust buttons (disabled placeholders) |
@@ -35,7 +35,7 @@ npm run dev                  # http://localhost:5173
 | `VITE_PROJECT_ID` | yes | WalletConnect projectId |
 | `VITE_WALLET_FEE_API_URL` | no | Wallet fee API base URL, for local/staging. Defaults to `https://api.walletconnect.com` |
 
-Every `@walletconnect/*` package is pinned to `2.25.1-canary-6`, in both `dependencies` and `overrides`. Check with `npm ls --all | grep @walletconnect/`.
+Every `@walletconnect/*` package is pinned to `2.26.1-canary-1`, in both `dependencies` and `overrides`. Check with `npm ls --all | grep @walletconnect/`.
 
 ## Scripts
 
@@ -64,14 +64,26 @@ The deploy uploads the **prebuilt** `dist/` folder, so the project needs no Verc
 
 ## How the fee is charged
 
+`getWalletFee()` returns the wallet's whole fee config, for every chain:
+
+```ts
+type WalletFee = {
+  feeBps?: number;
+  referralCode?: string;
+  recipients: { chainId: string; address: string }[]; // CAIP-2 chainId, e.g. "eip155:10"
+};
+```
+
+It's `undefined` when the wallet has no config, or has neither recipients nor a referral code. `wallet_fee_changed` fires when the config loads, when it changes after a `session_update`, and with `undefined` on disconnect. It doesn't fire on a chain switch.
+
 Everything is in `src/services/fee.service.ts`. `getIntegratorAddress(walletFee, chainId)` resolves the fee for the current chain in this order:
 
-1. **Referral.** The code is the wallet's `referralCode`, or a `?referrer=<code>` from the URL when the wallet sends none. The code is resolved through the mock referral API, and results are cached in sessionStorage.
+1. **Referral.** The code is the wallet's `referralCode`, or a `?referrer=<code>` from the URL when the wallet sends none. It applies on every chain. The code is resolved through the mock referral API, and results are cached in sessionStorage.
    - If the code is known: `to = integratorAddress`, `value = amount × feeBps / 10000`.
-2. **Direct.** If the wallet sent `feeBps` and `recipient`: `to = recipient`, `value = amount × feeBps / 10000`.
+2. **Direct.** If the wallet sent `feeBps` and a `recipients` entry whose `chainId` is `eip155:<current chain>`: `to = that address`, `value = amount × feeBps / 10000`. A chain without a recipient gets no direct fee.
 3. **None.** Otherwise there's no fee, and the swap sends 0 ETH to your own address so the flow still completes.
 
-The "Wallet fee" row under the quote shows which mechanism applied. It updates on `wallet_fee_changed`, after a network switch, and when a referral resolves.
+The "Wallet fee" row under the quote shows which mechanism applied. It updates on `wallet_fee_changed`, after a network switch (the app re-picks that chain's recipient from the same config), and when a referral resolves.
 
 ### Editing the mock referral table
 
@@ -125,7 +137,7 @@ In [react-native-examples](https://github.com/reown-com/react-native-examples), 
 Add two tiles to compare both connect variants: the URL as is (terms step), and the URL with `?terms=0` (direct auto-connect).
 
 Test with two wallet configs:
-- one with `feeBps` + recipient (the direct fee)
+- one with `feeBps` + recipients (the direct fee)
 - one with only a referral code (`rn-sample-ref`)
 
 ## Dev-only testing flags
@@ -135,7 +147,7 @@ These only work under `npm run dev` and are stripped from the production build.
 | Flag | Effect |
 | --- | --- |
 | `?simulateHost=1` | Injects `window.walletConnectHost = { autoConnect: true, postMessage: m => console.log("host", m) }` before the app reads it, to simulate a wallet launch. The session offer is logged to the console. |
-| `?demoFee=referral\|direct\|none` | Fakes a connected wallet and its fee, to preview each "Wallet fee" row and the "Swap complete" state without a wallet. No transaction is sent. |
+| `?demoFee=referral\|direct\|none` | Fakes a connected wallet and its fee, to preview each "Wallet fee" row and the "Swap complete" state without a wallet. The fake config has a different recipient on each network. No transaction is sent. |
 
 `?referrer=<code>` (a normal referral link) and `?terms=0` (see above) work in production too.
 

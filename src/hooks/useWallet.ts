@@ -47,10 +47,8 @@ export function useWallet(): Wallet {
       setWalletFee(undefined);
     };
     const onAccountsChanged = (accounts: string[]) => setAddress(accounts[0]);
-    const onChainChanged = (hexChainId: string) => {
-      setChainId(Number.parseInt(hexChainId, 16));
-      current?.getWalletFee().then(setWalletFee);
-    };
+    // the fee config covers every chain, so a chain switch doesn't change it (and doesn't emit wallet_fee_changed)
+    const onChainChanged = (hexChainId: string) => setChainId(Number.parseInt(hexChainId, 16));
     const onFeeChanged = (fee: WalletFee | undefined) => setWalletFee(fee);
 
     getProvider()
@@ -109,7 +107,6 @@ export function useWallet(): Wallet {
         params: [{ chainId: toHex(BigInt(nextChainId)) }],
       });
       setChainId(provider.chainId);
-      setWalletFee(await provider.getWalletFee());
     },
     [provider, status],
   );

@@ -69,7 +69,7 @@ export default function App() {
   };
 
   const address = demoWallet?.address ?? wallet.address;
-  const walletFee = demoWallet ? demoWallet.fee(wallet.chainId) : wallet.walletFee;
+  const walletFee = demoWallet ? demoWallet.fee : wallet.walletFee;
 
   return (
     <>

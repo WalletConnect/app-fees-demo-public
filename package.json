@@ -11,7 +11,7 @@
     "deploy": "npm run build && npx vercel deploy dist --prod --yes"
   },
   "dependencies": {
-    "@walletconnect/ethereum-provider": "2.25.1-canary-6",
+    "@walletconnect/ethereum-provider": "2.26.1-canary-1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
@@ -26,11 +26,11 @@
     "vitest": "^5.0.3"
   },
   "overrides": {
-    "@walletconnect/core": "2.25.1-canary-6",
-    "@walletconnect/ethereum-provider": "2.25.1-canary-6",
-    "@walletconnect/sign-client": "2.25.1-canary-6",
-    "@walletconnect/types": "2.25.1-canary-6",
-    "@walletconnect/universal-provider": "2.25.1-canary-6",
-    "@walletconnect/utils": "2.25.1-canary-6"
+    "@walletconnect/core": "2.26.1-canary-1",
+    "@walletconnect/ethereum-provider": "2.26.1-canary-1",
+    "@walletconnect/sign-client": "2.26.1-canary-1",
+    "@walletconnect/types": "2.26.1-canary-1",
+    "@walletconnect/universal-provider": "2.26.1-canary-1",
+    "@walletconnect/utils": "2.26.1-canary-1"
   }
 }

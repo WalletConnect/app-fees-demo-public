@@ -11,7 +11,9 @@ vi.mock("../mocks/referral-api", () => ({
 }));
 
 const OPTIMISM = 10;
-const directFee: WalletFee = { chainId: "eip155:10", feeBps: 30, recipient: "0xWallet" };
+const ARBITRUM = 42161;
+const BASE = 8453;
+const directFee: WalletFee = { feeBps: 30, recipients: [{ chainId: "eip155:10", address: "0xWallet" }] };
 
 beforeEach(() => {
   sessionStorage.clear();
@@ -29,7 +31,7 @@ describe("getIntegratorAddress", () => {
     expect(resolution).toEqual({ kind: "direct", to: "0xWallet", feeBps: 30 });
   });
 
-  it("uses the direct fee when there is no referral code", async () => {
+  it("uses the direct fee on a chain with a recipient", async () => {
     await expect(getIntegratorAddress(directFee, OPTIMISM)).resolves.toEqual({
       kind: "direct",
       to: "0xWallet",
@@ -38,24 +40,60 @@ describe("getIntegratorAddress", () => {
     expect(getIntegratorByReferrer).not.toHaveBeenCalled();
   });
 
+  it("returns no direct fee on a chain without a recipient", async () => {
+    await expect(getIntegratorAddress(directFee, BASE)).resolves.toEqual({ kind: "none" });
+  });
+
   it("returns no fee when the wallet sends nothing", async () => {
     await expect(getIntegratorAddress(undefined, OPTIMISM)).resolves.toEqual({ kind: "none" });
   });
 
-  it("returns no fee for an unknown code without feeBps/recipient", async () => {
+  it("returns no fee for an unknown code without feeBps/recipients", async () => {
     await expect(
-      getIntegratorAddress({ chainId: "eip155:10", referralCode: "unknown" }, OPTIMISM),
+      getIntegratorAddress({ referralCode: "unknown", recipients: [] }, OPTIMISM),
     ).resolves.toEqual({ kind: "none" });
   });
 
-  it("returns no fee when only one of feeBps/recipient is set", async () => {
-    await expect(getIntegratorAddress({ chainId: "eip155:10", feeBps: 30 }, OPTIMISM)).resolves.toEqual({
+  it("returns no fee when recipients are set without feeBps", async () => {
+    await expect(getIntegratorAddress({ ...directFee, feeBps: undefined }, OPTIMISM)).resolves.toEqual({
       kind: "none",
     });
   });
 
-  it("ignores a fee for another chain", async () => {
-    await expect(getIntegratorAddress(directFee, 8453)).resolves.toEqual({ kind: "none" });
+  it("applies the wallet's referral code on any chain", async () => {
+    const referralOnly: WalletFee = { referralCode: "known", recipients: [] };
+    for (const chainId of [OPTIMISM, ARBITRUM, BASE]) {
+      await expect(getIntegratorAddress(referralOnly, chainId)).resolves.toEqual({
+        kind: "referral",
+        code: "known",
+        to: "0xIntegrator",
+        feeBps: 50,
+      });
+    }
+    await expect(getIntegratorAddress({ ...directFee, referralCode: "known" }, BASE)).resolves.toMatchObject({
+      kind: "referral",
+    });
+  });
+
+  it("picks the recipient for the current chain from a multi-chain config", async () => {
+    const multiChain: WalletFee = {
+      feeBps: 25,
+      recipients: [
+        { chainId: "eip155:10", address: "0xOptimism" },
+        { chainId: "eip155:42161", address: "0xArbitrum" },
+      ],
+    };
+    await expect(getIntegratorAddress(multiChain, OPTIMISM)).resolves.toEqual({
+      kind: "direct",
+      to: "0xOptimism",
+      feeBps: 25,
+    });
+    await expect(getIntegratorAddress(multiChain, ARBITRUM)).resolves.toEqual({
+      kind: "direct",
+      to: "0xArbitrum",
+      feeBps: 25,
+    });
+    await expect(getIntegratorAddress(multiChain, BASE)).resolves.toEqual({ kind: "none" });
   });
 
   describe("?referrer= URL param", () => {
