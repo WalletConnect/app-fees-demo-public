@@ -34,23 +34,22 @@ export async function resolveReferral(code: string): Promise<Integrator | null> 
   return integrator;
 }
 
-function isForChain(walletFee: WalletFee, chainId: number): boolean {
-  return walletFee.chainId === `eip155:${chainId}` || walletFee.chainId === String(chainId);
+/** The wallet's fee recipient on `chainId`, from its whole fee config. */
+function getRecipient(walletFee: WalletFee | undefined, chainId: number): string | undefined {
+  return walletFee?.recipients.find((recipient) => recipient.chainId === `eip155:${chainId}`)?.address;
 }
 
 /**
  * Decides who gets the fee on the current chain:
- * 1. referral code (from the wallet, else from `?referrer=`) that the partner program knows → integrator
- * 2. feeBps + recipient from the wallet → direct fee
+ * 1. referral code (from the wallet, else from `?referrer=`) that the partner program knows → integrator, on any chain
+ * 2. feeBps + the wallet's recipient for this chain → direct fee
  * 3. otherwise no fee
  */
 export async function getIntegratorAddress(
   walletFee: WalletFee | undefined,
   chainId: number,
 ): Promise<FeeResolution> {
-  const fee = walletFee && isForChain(walletFee, chainId) ? walletFee : undefined;
-
-  const code = fee?.referralCode || getUrlReferrer();
+  const code = walletFee?.referralCode || getUrlReferrer();
   if (code) {
     const integrator = await resolveReferral(code);
     if (integrator) {
@@ -58,8 +57,9 @@ export async function getIntegratorAddress(
     }
   }
 
-  if (fee?.feeBps && fee.recipient) {
-    return { kind: "direct", to: fee.recipient, feeBps: fee.feeBps };
+  const recipient = getRecipient(walletFee, chainId);
+  if (walletFee?.feeBps && recipient) {
+    return { kind: "direct", to: recipient, feeBps: walletFee.feeBps };
   }
 
   return { kind: "none" };

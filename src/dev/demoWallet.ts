@@ -10,17 +10,23 @@ const mode = import.meta.env.DEV
   ? (new URLSearchParams(window.location.search).get("demoFee") as DemoFeeMode | null)
   : null;
 
+/** One recipient per chain in the network selector, so a network switch shows that chain's recipient. */
+const recipients: WalletFee["recipients"] = [
+  { chainId: "eip155:10", address: "0x1234000000000000000000000000000000005eab" },
+  { chainId: "eip155:42161", address: "0x1234000000000000000000000000000000a4b1" },
+  { chainId: "eip155:8453", address: "0x1234000000000000000000000000000000002105" },
+];
+
+function demoFee(mode: DemoFeeMode): WalletFee | undefined {
+  if (mode === "referral") return { referralCode: "rn-sample-ref", feeBps: 30, recipients };
+  if (mode === "direct") return { feeBps: 50, recipients };
+  return undefined;
+}
+
 export const demoWallet = mode
   ? {
       address: "0xD3m0000000000000000000000000000000000Ab",
-      fee(chainId: number): WalletFee | undefined {
-        const caip = `eip155:${chainId}`;
-        if (mode === "referral")
-          return { chainId: caip, referralCode: "rn-sample-ref", feeBps: 30, recipient: "0x1234000000000000000000000000000000005eab" };
-        if (mode === "direct")
-          return { chainId: caip, feeBps: 50, recipient: "0x1234000000000000000000000000000000005eab" };
-        return undefined;
-      },
+      fee: demoFee(mode),
       async sendTransaction(tx: { to: string; value: bigint }): Promise<string> {
         console.log("[dev] demo eth_sendTransaction", tx);
         await new Promise((resolve) => setTimeout(resolve, 500));
